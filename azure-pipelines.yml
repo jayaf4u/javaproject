@@ -1,0 +1,58 @@
+pool:
+  name: Azure Pipelines
+  demands: maven
+
+variables:
+  mavenPOMFile: 'HospitalManagementSystem/pom.xml'
+
+steps:
+- task: SonarSource.sonarqube.15B84CA1-B62F-4A2A-A403-89B77A063157.SonarQubePrepare@5
+  displayName: 'Prepare analysis on SonarQube'
+  inputs:
+    SonarQube: sonar2
+    scannerMode: Other
+    extraProperties: |
+     # Additional properties that will be passed to the scanner,
+     # Put one key=value per line, example:
+     # sonar.exclusions=**/*.bin
+     sonar.projectKey=javaproject
+     sonar.projectName=javaproject
+     
+
+- task: JavaToolInstaller@0
+  displayName: 'Use Java 17'
+  inputs:
+    versionSpec: 17
+    jdkArchitectureOption: x64
+    jdkSourceOption: PreInstalled
+
+- task: Maven@3
+  displayName: 'Maven HospitalManagementSystem/pom.xml'
+  inputs:
+    mavenPomFile: '$(Parameters.mavenPOMFile)'
+    sonarQubeRunAnalysis: true
+
+- task: SonarSource.sonarqube.291ed61f-1ee4-45d3-b1b0-bf822d9095ef.SonarQubePublish@5
+  displayName: 'Publish Quality Gate Result'
+  enabled: false
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory)'
+  inputs:
+    SourceFolder: '$(system.defaultworkingdirectory)'
+    Contents: '**/*.jar'
+    TargetFolder: '$(build.artifactstagingdirectory)'
+  condition: succeededOrFailed()
+
+- task: CopyFiles@2
+  displayName: 'Copy Files to: $(build.artifactstagingdirectory) '
+  inputs:
+    SourceFolder: '$(system.defaultworkingdirectory)'
+    TargetFolder: '$(build.artifactstagingdirectory)'
+  condition: succeededOrFailed()
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: drop'
+  inputs:
+    PathtoPublish: '$(build.artifactstagingdirectory)'
+  condition: succeededOrFailed()
